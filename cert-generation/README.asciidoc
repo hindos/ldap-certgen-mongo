@@ -1,0 +1,150 @@
+= Certificate generation scripts
+:source-highlighter: pygments
+:toc:
+
+For Client to ACE to MQ over TLS-based mutual suthentication, few certificate and key artifacts need to be created. This repository contains a docker based script that takes care of creating these artifacts in one go.
+
+[NOTE]
+====
+We recommend to go over the commands one by one, gettting a deeper understanding on how they work. See link:https://github.ibm.com/cpat-int-samples/documentation/blob/master/TLS/Certs/README.asciidoc[Keys, Certficates and Stores]
+====
+
+== The Artifacts
+
+The communication flow between the services and the client, can be depicted as:
+
+image:images/ca.png[]
+
+Here, we will create
+
+. A CA key (`cpat-ca.key`) and a CA certificate (`cpat-ca.crt`). The CA key and certificate will be used to sign the certificates for MQ, ACE and the client. The CA certificate (`cpat-ca.crt`) will be trusted by MQ, ACE and the client.
+
+. A client key (`client.key`) and certificate (`client.crt`). The key and certificate will be used by the client to authenticate itself with the ACE server. The certificate will be siged by our CA.
+
+. A key (`ace-server.key`) and certificate (`ace-server.crt`) for ace server. The key and certificate will be used by the ACE for it's own identity. The same key and certificate will be used in mutual authentication with both the client and MQ. The certificate will be siged by our CA.
+
+. A PCKS12 keystore (`ace-server.p12`) containing ace server's key (`ace-server.key`) and certificate (`ace-server.crt`). The keystore is not directly used, but used when creating the JKS and KDB keystores described later.
+
+. A JKS keystore (`ace-server.jks`) for ace server, containing ace server's key (`ace-server.key`) and certificate (`ace-server.crt`). It is created from the PCKS12 keystore (`ace-server.p12`). The JKS keystore is used by the ace server to expose it's HTTPS endpoint.
+
+. A JKS truststore (`cpat-ca.jks`), containing the CA certificate (`cpat-ca.crt`). It is used by the ace server with doing mutual authentication with the client.
+
+. A key (`mq-server.key`) and certificate (`mq-server.crt`) for MQ used for it's own identity. The key and certificate will be used in mutual authentication ACE. The certificate will be siged by our CA.
+
+. A KDB store (`ace-server.kdb`), containing ace server's key (`ace-server.key`), certificate (`ace-server.crt`) and the CA certificate (`cpat-ca.crt`). A stash file (`ace-server.sth`), a RDB file (`ace-server.rdb`) and a CRL file (`ace-server.crl`) will also be created. Note that, during deployment of ACE server, only the KDB and STH file are needed.
+
+== The Script
+
+The script is actually a link:docker/certs/Makefile[]. The targets are the various certificate artifacts. The commands needed to build the artifacts are `openssh`, `keytool`, `runmqakm` and `runmqckm`. We use a docker container to run these commands. The docker image contains all the necessary dependencies.
+
+The `docker-compose.yaml`:
+
+.link:docker/docker-compose.yaml[]
+[source,yaml]
+----
+version: "3"
+
+services:
+  cert-generator:
+    build:
+      context: .
+    volumes:
+      - ./certs:/certs
+    working_dir: '/certs'
+    command: ${CMD:-make}
+    environment:
+      - COMMON_NAME=*.eu-gb.containers.appdomain.cloud
+      - SAN_DNS=*.cp4i-2020-2-install-tes-3cd0ec11030dfa215f262137faf739f1-0000.eu-gb.containers.appdomain.cloud
+
+----
+
+can be used to run the script. The script make use of three environment variables.
+
+COMMON_NAME and SAN::
+Fully qualified hostname for our services, such as MQ and ACE, that are deployed on ROKS, are automatically generated. They seems to have the following form:
++
+[source]
+----
+<hostname-of-service>.<unique-cluster-sub-domain>.<region>.containers.appdomain.cloud
+----
++
+For London based cluster, `region` seems to be `eu-gb`.
++
+You can get the `unique-cluster-sub-domain` once you provision your cluster.
++
+The `hostname-of-service` is generated based on the name of the service. For instance, `create-customer-v1-https-https-ace.cp4i-2020-2-install-tes-3cd0ec11030dfa215f262137faf739f1-0000.eu-gb.containers.appdomain.cloud` is the hostname of an ACE server, who's `IntegrationServer` object was named `create-customer-v1-https`.
++
+We can use a wildcard (`*`) in the sub-domain in the Common Name to have some flexibility - and use the same certificate for more than one service. But Common Name has a limit of 64 characters and host name with sub-domains, `<unique-cluster-sub-domain>.<region>.containers.appdomain.cloud`, is likely to be more than 64 characters. Therefore, we would need to use Subject Alternative Name with a DNS entry to pass in our wild-carded hostname name.
++
+The `COMMON_NAME` and `SAN` environment variable are use to set the desired Common Name and Subject Alternate Name. In the `docker-compose.yaml`, example values are set.
++
+[NOTE]
+====
+Since we are setting Subject Alternative Names anyway, setting Common Name is not necessary
+====
+
+== Run the Script
+
+To run the script within the container, we can use `run` command of `docker-compose`, on the `cert-generator` service. Assuming you have cloned this repo, change to the link:docker[] directory, so that you have:
+
+[source, bash]
+----
+$ tree .
+.
+├── Dockerfile
+├── certs
+│   ├── Makefile
+│   └── san.ext
+├── docker-compose.yaml
+└── generate.sh
+
+1 directory, 5 files
+----
+
+Then execute the script:
+
+[source, bash]
+----
+$ docker-compose run cert-generator
+----
+
+The above should create all the certificate artifacts in the `cert` directory:
+
+[source, bash]
+----
+$ tree .
+.
+├── Dockerfile
+├── certs
+│   ├── Makefile
+│   ├── ace-server.crt
+│   ├── ace-server.jks
+│   ├── ace-server.kdb
+│   ├── ace-server.key
+│   ├── ace-server.p12
+│   ├── ace-server.sth
+│   ├── client.crt
+│   ├── client.key
+│   ├── cpat-ca.crt
+│   ├── cpat-ca.jks
+│   ├── cpat-ca.key
+│   ├── cpat-ca.srl
+│   ├── mq-server.crt
+│   ├── mq-server.key
+│   └── san.ext
+├── docker-compose.yaml
+└── generate.sh
+
+1 directory, 19 files
+----
+
+== Debug the certs
+
+If you would like examine the certificate and keystores using `openssl`, `runmqakm` or `keytool`, you might want to use these tools from the Docker container. If so, simply run the following from the `docker` directory:
+
+[source, bash]
+----
+$ docker-compose --env-file .env.sh run cert-generator
+----
+
+This will drop in the `cert` directory, running shell within the container.

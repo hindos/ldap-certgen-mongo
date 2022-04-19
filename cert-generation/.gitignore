@@ -1,0 +1,7 @@
+*.crt
+*.key
+*.jks
+*.kdb
+*.p12
+*.sth
+*.srl

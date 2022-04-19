@@ -1,0 +1,21 @@
+{
+  "channel": [
+    {
+      "name": "DEV.APP.SVRCONN",
+      "clientConnection": {
+        "connection": [
+          {
+            "host": "REPLACE_HOST",
+            "port": 443
+          }
+        ],
+        "queueManager": "CQM5"
+      },
+      "transmissionSecurity": {
+        "cipherSpecification": "ECDHE_RSA_AES_256_CBC_SHA384",
+        "certificateLabel": "aceclient"
+      },
+      "type": "clientConnection"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+dn: ou=people,dc=ibm,dc=com
+objectClass: organizationalUnit
+description: All people in organization
+ou: people
+
+dn: ou=groups,dc=ibm,dc=com
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+#MQ user + group
+dn: uid=app,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: appCN
+sn: appSN
+uid: app
+userPassword: app
+
+dn: cn=apps,ou=groups,dc=ibm,dc=com
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: apps
+uniquemember: uid=app,ou=people,dc=ibm,dc=com
+
+dn: uid=mqadmin,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: mqadminCN
+sn: mqadminSN
+uid: mqadmin
+userPassword: mqadmin
+
+dn: cn=mqadmins,ou=groups,dc=ibm,dc=com
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: mqadmins
+uniquemember: uid=mqadmin,ou=people,dc=ibm,dc=com
+
+#Group for ACE servers connecting to a remote default queue manager
+dn: uid=acerdef,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: acerdefCN
+sn: acerdefSN
+uid: acerdef
+userPassword: acerdef
+
+dn: cn=acerdef,ou=groups,dc=ibm,dc=com
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: acerdef
+uniquemember: uid=acerdef,ou=people,dc=ibm,dc=com
+
+#Group for ACE messaging applications
+dn: uid=aceapp,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: aceappCN
+sn: aceappSN
+uid: aceapp
+userPassword: aceapp
+
+#Group for kafka connect apps
+dn: uid=kafkacnct,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: kafkacnctCN
+sn: kafkacnctSN
+uid: kafkacnct
+userPassword: kafkacnct
+
+dn: cn=kafkacnct,ou=groups,dc=ibm,dc=com
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: kafkacnct
+uniquemember: uid=kafkacnct,ou=people,dc=ibm,dc=com
+
+#Group for kafka connect apps
+dn: uid=dpapp,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: dpappCN
+sn: dpappSN
+uid: dpapp
+userPassword: dpapp
+
+#Group and user for datapower connections.
+dn: cn=dpapp,ou=groups,dc=ibm,dc=com
+objectClass: groupOfUniqueNames
+objectClass: top
+cn: dpapp
+uniquemember: uid=dpapp,ou=people,dc=ibm,dc=com

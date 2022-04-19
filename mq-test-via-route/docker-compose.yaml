@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  mq-client:
+    build:
+      context: .
+    working_dir: /client-volume
+    environment:
+      - LICENSE=accept
+      - MQCCDTURL=/client-volume/ccdt.json
+      - MQSAMP_USER_ID=app
+    volumes:
+      - ./client-volume:/client-volume

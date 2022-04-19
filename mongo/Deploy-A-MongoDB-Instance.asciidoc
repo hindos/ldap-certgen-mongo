@@ -1,0 +1,124 @@
+:experimental:
+:toc:
+
+= Deploy a MongoDB instance in OCP 4.3
+
+== Using the OCP Web UI
+We will deploy a MongoDB using OpenShift 4.3 templates. We will deploy it on its own namespace.
+
+. Create a namespace, on the home page of OpenShift UI, click on menu:Home[Projects] and on the Projects page, click btn:[Create Project]:
++
+image::images/create-project.png[]
++
+For this exercise, we will name the project, `mongodb`.
++
+image::images/mongodb-project.png[]
+
+. Deploy MongoDB from template:
+.. Go to menu:Administrator[Developer] on the home page of OpenShift Web UI:
++
+image::images/developer-dropdown.png[]
+
+.. On the Developer page, click on btn:[+Add] and select select btn:[Database]:
++
+image::images/add-database.png[]
+
+.. Find MongoDB and click on it. Thereafter, click btn:[Instantiate Template]
++
+image::images/instantiate-template.png[]
+
+.. We will use the following configuration:
++
+--
+Namespace:: `mongodb`
+Database Service Name:: `mongodb`
+MongoDB Connection Username:: `mongodbuser`
+MongoDB Connection Password:: `mongodbpassword`
+MongoDB Database Name:: `sample`
+MongoDB Admin Password:: `password`
+--
++
+image::images/mongodb-settings.png[]
++
+Click btn:[Create] to deploy the MongoDB instance.
+
+. Verify that the instance is running from the Pod details under `mongodb` project. menu:Workloads[Pods > mongodb-xyz]
++
+image::images/mongodb-verify.png[]
++
+Also verify that the connection secret contains the values entered earlier. menu:Workloads[Secrets > mongodb] :
++
+image::images/mongodb-secret-verify.png[]
+
+== Using the OCP CLI tool `oc`
+
+Create a new project/namespace, `mongodb`
+
+[source, bash]
+----
+$ oc new-project mongodb
+----
+
+The MongoDB instance can be deployed via `oc` CLI. OCP 4.3 comes with two MongoDB templates, `mongodb-ephemeral` and `mongodb-persistent`. We will use the `mongodb-persistent` template.
+
+Lets examine the parameters it takes:
+
+[source, bash]
+----
+oc process --parameters -n openshift mongodb-persistent
+NAME                     DESCRIPTION                                                               GENERATOR           VALUE
+MEMORY_LIMIT             Maximum amount of memory the container can use.                                               512Mi
+NAMESPACE                The OpenShift Namespace where the ImageStream resides.                                        openshift
+DATABASE_SERVICE_NAME    The name of the OpenShift Service exposed for the database.                                   mongodb
+MONGODB_USER             Username for MongoDB user that will be used for accessing the database.   expression          user[A-Z0-9]{3}
+MONGODB_PASSWORD         Password for the MongoDB connection user.                                 expression          [a-zA-Z0-9]{16}
+MONGODB_DATABASE         Name of the MongoDB database accessed.                                                        sampledb
+MONGODB_ADMIN_PASSWORD   Password for the database admin user.                                     expression          [a-zA-Z0-9]{16}
+VOLUME_CAPACITY          Volume space available for data, e.g. 512Mi, 2Gi.                                             1Gi
+MONGODB_VERSION          Version of MongoDB image to be used (3.6 or latest).                                          3.6
+----
+
+From above, we will set `DATABASE_SERVICE_NAME`, `MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_DATABASE` and `MONGODB_ADMIN_PASSWORD`
+
+To see the instantiated values from the template:
+
+[source, bash]
+----
+$ oc process mongodb-persistent \
+   -p DATABASE_SERVICE_NAME=mongodb \
+   -p MONGODB_USER=mongodbuser \
+   -p MONGODB_PASSWORD=mongodbpassword \
+   -p MONGODB_DATABASE=sample \
+   -p MONGODB_ADMIN_PASSWORD=password  \
+   -n openshift
+----
+
+And to install the MongoDB instance, we the pipe the above to `oc create -f -`
+
+[source, bash]
+----
+$ oc process mongodb-persistent \
+   -p DATABASE_SERVICE_NAME=mongodb \
+   -p MONGODB_USER=mongodbuser \
+   -p MONGODB_PASSWORD=mongodbpassword \
+   -p MONGODB_DATABASE=sample \
+   -p MONGODB_ADMIN_PASSWORD=password  \
+   -n openshift | oc create -f -
+----
+
+Verify the installation with `oc get all`. You also also verify that the connection details are places in the secret as expected:
+
+[source, bash]
+----
+$ oc get secrets mongodb -o=jsonpath="{.data['database-admin-password']}" | base64 -d
+password
+
+$ oc get secrets mongodb -o=jsonpath='{.data.database-name}' | base64 -d
+sample
+
+$ oc get secrets mongodb -o=jsonpath='{.data.database-password}' | base64 -d
+mongodbpassword
+
+$ oc get secrets mongodb -o=jsonpath='{.data.database-user}' | base64 -d
+mongodbuser
+----

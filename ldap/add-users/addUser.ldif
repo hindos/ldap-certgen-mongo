@@ -1,0 +1,10 @@
+dn: uid=dalli,ou=people,dc=ibm,dc=com
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: dalliCN
+sn: dalliSN
+uid: dalli
+userPassword: Passw0rd!
+ 
